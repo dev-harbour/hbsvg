@@ -1,17 +1,7 @@
-<div align="center">
-   <h1 align="center">hbsvg: A Simple SVG Library in Harbour</h1>
-</div>
-<br />
+/*
+ * 
+ */
 
-`hbsvg` is a minimalistic library for creating Scalable Vector Graphics (SVG) files using the Harbour programming language. This library adheres to the [W3C SVG](https://www.w3.org/TR/SVG2/) standard and is designed to simplify various graphic tasks.
-
-### Getting Started
-
-For more info see [getting started](examples/README.md).
-
-### Example
-
-```
 PROCEDURE Main()
 
    LOCAL x, y, x1, y1, x2, y2
@@ -49,10 +39,5 @@ PROCEDURE Main()
    
    svg_close( svg )
 
-RETURN
-```
+RETURN 
 
-![Main](docs/assets/img/example_01.svg)
-
-### Contributing
-Contributions are welcome! Feel free to submit a pull request.

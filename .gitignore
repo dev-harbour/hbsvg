@@ -1,0 +1,6 @@
+# arsvg
+*.bak
+*.exe
+*.hbx
+lib
+tmp
