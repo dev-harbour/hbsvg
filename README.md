@@ -11,7 +11,7 @@ For more info see [getting started](examples/README.md).
 
 ### Example
 
-```
+``` harbour
 PROCEDURE Main()
 
    LOCAL x, y, x1, y1, x2, y2
