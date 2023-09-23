@@ -307,7 +307,6 @@ HB_FUNC( SVG_POLYLINE )
          points[ i ] = hb_arrayGetNI( pItem, ( HB_SIZE ) i + 1 );
       }
 
-      // Retrieving elements from the Harbour array into the points array
       for( int i = 0; i < point_count; i += 2 )
       {
          fprintf( svg->file, "%d,%d ", points[ i ], points[ i + 1 ] );
@@ -441,6 +440,51 @@ HB_FUNC( SVG_FILLED_ELLIPSE )
       HB_ERR_ARGS();
    }   
 }
+/* svg_bezier_curve( <pHandle>, <aPoints>, <nPoint_count>, <nStroke_width>, <nColor> ) --> NIL */
+HB_FUNC( SVG_BEZIER_CURVE )
+{
+   SVG *svg = hb_svgParam( 1 );
+   PHB_ITEM pItem;
+
+   if( svg && ( pItem = hb_param( 2, HB_IT_ARRAY ) ) != NULL )
+   {
+      int point_count = hb_parni( 3 );
+      int stroke_width = hb_parni( 4 );
+      unsigned int color = hb_parni( 5 );
+
+      point_count = ( int ) hb_arrayLen( pItem );
+      int *points = NULL;
+
+      if( point_count )
+      {
+         points = ( int * ) hb_xgrab( point_count * sizeof( int ) );
+      }
+
+      // Retrieving elements from the Harbour array into the points array
+      for( int i = 0; i < point_count; ++i )
+      {
+         points[ i ] = hb_arrayGetNI( pItem, ( HB_SIZE ) i + 1 );
+      }
+
+      fprintf( svg->file, "<path d=\"M %d %d ", points[ 0 ], points[ 1 ] );
+
+      for( int i = 2; i < point_count; i += 6 )
+      {
+         fprintf( svg->file, "C %d %d, %d %d, %d %d ", points[ i ], points[ i + 1 ], points[ i + 2 ], points[ i + 3 ], points[ i + 4 ], points[ i + 5 ] );
+      }
+
+      fprintf( svg->file, "\" stroke=\"#%06x\" stroke-width=\"%d\" fill=\"none\"/>\n", color, stroke_width );
+    
+      if( points )
+      {
+         hb_xfree( points );
+      }
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }      
+}
 
 /* svg_text( <pHandle>, <nX>, <nY>, <cText>, <cFont>, <nSize>, <nColor> ) --> NIL */
 HB_FUNC( SVG_TEXT )
@@ -462,4 +506,174 @@ HB_FUNC( SVG_TEXT )
    {
       HB_ERR_ARGS();
    }   
+}
+
+/* Linear gradient */
+/* svg_linear_gradient( <pHandle>, <cId>, <nStartColor>, <nEndColor>, <nX1>, <nY1>, <nX2>, <nY2> ) --> NIL */
+HB_FUNC( SVG_LINEAR_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {
+      const char *id = hb_parc( 2 );
+      unsigned int startColor = hb_parni( 3 );
+      unsigned int endColor = hb_parni( 4 );
+      float x1 = hb_parnd( 5 );
+      float y1 = hb_parnd( 6 );
+      float x2 = hb_parnd( 7 );
+      float y2 = hb_parnd( 8 );
+
+      fprintf( svg->file, "<defs>\n" );
+      fprintf( svg->file, "<linearGradient id=\"%s\" x1=\"%f%%\" y1=\"%f%%\" x2=\"%f%%\" y2=\"%f%%\">\n", id, x1, y1, x2, y2 );
+      fprintf( svg->file, "<stop offset=\"0%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", startColor );
+      fprintf( svg->file, "<stop offset=\"100%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", endColor );
+      fprintf( svg->file, "</linearGradient>\n" );
+      fprintf( svg->file, "</defs>\n" );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }   
+}
+
+/* svg_triangle_linear_gradient( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nX3>, <nY3>, <nStartColor>, <nEndColor> ) --> NIL */ // to be fixed
+HB_FUNC( SVG_TRIANGLE_LINEAR_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {   
+      int x1 = hb_parni( 2 );
+      int y1 = hb_parni( 3 );
+      int x2 = hb_parni( 4 );
+      int y2 = hb_parni( 5 );
+      int x3 = hb_parni( 6 );
+      int y3 = hb_parni( 7 );
+      unsigned int startColor = hb_parni( 8 );
+      unsigned int endColor = hb_parni( 9 );
+
+      // Definition of a linear gradient triangle
+      static int gradient_id = 0;
+      fprintf( svg->file, "<defs>\n" );
+      fprintf( svg->file, "  <linearGradient id=\"triangleGradient%d\" x1=\"0%%\" y1=\"0%%\" x2=\"100%%\" y2=\"0%%\">\n", gradient_id );
+      fprintf( svg->file, "    <stop offset=\"0%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", startColor );
+      fprintf( svg->file, "    <stop offset=\"100%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", endColor );
+      fprintf( svg->file, "  </linearGradient>\n" );
+      fprintf( svg->file, "</defs>\n" );
+
+      // Drawing a triangle with a gradient
+      fprintf( svg->file, "<polygon points=\"%d,%d %d,%d %d,%d\" fill=\"url(#triangleGradient%d)\"/>\n", x1, y1, x2, y2, x3, y3, gradient_id );
+
+      gradient_id++; // Increment the gradient ID
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }        
+}
+
+/* Radial gradient */
+/* svg_radial_gradient( <pHandle>, cId, nInnerColor, nOuterColor, nCx, nCy, nR ) --> NIL */
+HB_FUNC( SVG_RADIAL_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {   
+      const char *id = hb_parc( 2 );
+      unsigned int innerColor = hb_parni( 3 );
+      unsigned int outerColor = hb_parni( 4 );
+      float cx = hb_parnd( 5 );
+      float cy = hb_parnd( 6 );
+      float r = hb_parnd( 7 );
+
+      fprintf( svg->file, "<defs>\n" );
+      fprintf( svg->file, "<radialGradient id=\"%s\" cx=\"%f%%\" cy=\"%f%%\" r=\"%f%%\">\n", id, cx, cy, r );
+      fprintf( svg->file, "<stop offset=\"0%%\" style=\"stop-color:#%06x;stop-opacity:1\"/>\n", innerColor );
+      fprintf( svg->file, "<stop offset=\"100%%\" style=\"stop-color:#%06x;stop-opacity:1\"/>\n", outerColor );
+      fprintf( svg->file, "</radialGradient>\n" );
+      fprintf( svg->file, "</defs>\n" );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }        
+}
+
+/* svg_triangle_radial_gradient( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nX3>, <nY3>, <nStartColor>, <nEndColor> ) --> NIL */ // to be fixed
+HB_FUNC( SVG_TRIANGLE_RADIAL_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {   
+      int x1 = hb_parni( 2 );
+      int y1 = hb_parni( 3 );
+      int x2 = hb_parni( 4 );
+      int y2 = hb_parni( 5 );
+      int x3 = hb_parni( 6 );
+      int y3 = hb_parni( 7 );
+      unsigned int startColor = hb_parni( 8 );
+      unsigned int endColor = hb_parni( 9 );
+
+      // Definition of a radial gradient triangle
+      static int gradient_id = 0;
+      fprintf( svg->file, "<defs>\n" );
+      fprintf( svg->file, "  <radialGradient id=\"triangleRadialGradient%d\" cx=\"50%%\" cy=\"50%%\" r=\"50%%\">\n", gradient_id );
+      fprintf( svg->file, "    <stop offset=\"0%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", startColor );
+      fprintf( svg->file, "    <stop offset=\"100%%\" style=\"stop-color:#%06x;stop-opacity:1\" />\n", endColor );
+      fprintf( svg->file, "  </radialGradient>\n" );
+      fprintf( svg->file, "</defs>\n" );
+
+      // Drawing a triangle with a gradient 
+      fprintf( svg->file, "<polygon points=\"%d,%d %d,%d %d,%d\" fill=\"url(#triangleRadialGradient%d)\"/>\n", x1, y1, x2, y2, x3, y3, gradient_id );
+
+      gradient_id++; // Increment the gradient ID
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }        
+}
+
+/* svg_rect_gradient( <pHandle>, nX, nY, nWidth, nHeight, cGradient_id ) */
+HB_FUNC( SVG_RECT_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {    
+      int x = hb_parni( 2 );
+      int y = hb_parni( 3 );
+      int width = hb_parni( 4 );
+      int height = hb_parni( 5 );
+      const char *gradient_id = hb_parc( 6 );
+
+      fprintf( svg->file, "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"url(#%s)\"/>\n", x, y, width, height, gradient_id );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }       
+}
+
+/* svg_circle_gradient( <pHandle>, nCx, nCy, nR, cGradient_id ) --> NIL */
+HB_FUNC( SVG_CIRCLE_GRADIENT )
+{
+   SVG *svg = hb_svgParam( 1 );
+
+   if( svg )
+   {    
+      int cx = hb_parni( 2 );
+      int cy = hb_parni( 3 );
+      int r = hb_parni( 4 );
+      const char *gradient_id = hb_parc( 5 );
+
+      fprintf( svg->file, "<circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"url(#%s)\"/>\n", cx, cy, r, gradient_id );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }       
 }
