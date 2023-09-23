@@ -81,7 +81,7 @@ HB_FUNC( SVG_INIT )
       fprintf( svg->file, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" );
       fprintf( svg->file, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" " );
       fprintf( svg->file, "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n" );
-      fprintf( svg->file, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\">\n", svg->width, svg->height );
+      fprintf( svg->file, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">\n", svg->width, svg->height, svg->width, svg->height );
 
       hb_svgReturn( svg );
    }
@@ -272,6 +272,53 @@ HB_FUNC( SVG_LINE )
       unsigned int color = hb_parni( 7 );
 
       fprintf( svg->file, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%d; stroke:#%06x\" />\n", x1, y1, x2, y2, stroke_width, color );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }
+}
+
+/* svg_polyline( <pHandle>, <aPoints>, <nPint_count>, <nStroke_width>, <nColor> ) --> NIL */
+HB_FUNC( SVG_POLYLINE )
+{
+   SVG *svg = hb_svgParam( 1 );
+   PHB_ITEM pItem;
+
+   if( svg && ( pItem = hb_param( 2, HB_IT_ARRAY ) ) != NULL )
+   {
+      int point_count = hb_parni( 3 );
+      int stroke_width = hb_parni( 4 );
+      unsigned int color = hb_parni( 5 );
+
+      fprintf( svg->file, "<polyline points=\"" );
+
+      point_count = ( int ) hb_arrayLen( pItem );
+      int *points = NULL;
+
+      if( point_count )
+      {
+         points = ( int * ) hb_xgrab( point_count * sizeof( int ) );
+      }
+
+      // Retrieving elements from the Harbour array into the points array
+      for( int i = 0; i < point_count; ++i )
+      {
+         points[ i ] = hb_arrayGetNI( pItem, ( HB_SIZE ) i + 1 );
+      }
+
+      // Retrieving elements from the Harbour array into the points array
+      for( int i = 0; i < point_count; i += 2 )
+      {
+         fprintf( svg->file, "%d,%d ", points[ i ], points[ i + 1 ] );
+      }
+
+      fprintf( svg->file, "\" stroke-width=\"%d\" stroke=\"#%06x\" fill=\"none\"/>\n", stroke_width, color );
+
+      if( points )
+      {
+         hb_xfree( points );
+      }
    }
    else
    {
