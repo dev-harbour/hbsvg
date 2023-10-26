@@ -52,7 +52,46 @@ void hb_svgReturn( SVG *pSVG )
 }
 
 /* =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+// static
+static void svg_line( SVG *svg, int x1, int y1, int x2, int y2, int stroke_width, unsigned int color )
+{
+   fprintf( svg->file, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%d; stroke:#%06x\" />\n", x1, y1, x2, y2, stroke_width, color );
+}
 
+static void svg_text( SVG *svg, int x, int y, const char *text, const char *font, int size, unsigned int color )
+{
+   fprintf( svg->file, "<text x=\"%d\" y=\"%d\" font-family=\"%s\" font-size=\"%d\" fill=\"#%06x\">%s</text>\n", x, y, font, size, color, text );
+}
+
+static void svg_arrow( SVG *svg, int x1, int y1, int x2, int y2, int stroke_width, unsigned int color )
+{
+   // Draw a line from ( x1, y1 ) to ( x2, y2 )
+   svg_line( svg, x1, y1, x2, y2, stroke_width, color );
+
+   // Calculate the angle of the line
+   double angle = atan2( ( double )( y2 - y1 ), ( double )( x2 - x1 ) );
+
+   // Length of the arrow head
+   int arrow_length = 10;
+
+   // Angles for the arrow heads
+   double angle1 = angle + M_PI / 6.0;
+   double angle2 = angle - M_PI / 6.0;
+
+   // Calculate the endpoints for the arrow head
+   int x3 = x2 - ( int ) ( arrow_length * cos( angle1 ) );
+   int y3 = y2 - ( int ) ( arrow_length * sin( angle1 ) );
+
+   int x4 = x2 - ( int ) ( arrow_length * cos( angle2 ) );
+   int y4 = y2 - ( int ) ( arrow_length * sin( angle2 ) );
+
+   // Draw the "head" of the arrow
+   svg_line( svg, x2, y2, x3, y3, stroke_width, color );
+   svg_line( svg, x2, y2, x4, y4, stroke_width, color );
+}
+
+/* =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+// API functions
 /* svg_init( <cFileName>, <nWidth>, <nHeight> ) --> <pHandle> | NIL */
 HB_FUNC( SVG_INIT )
 {
@@ -91,16 +130,31 @@ HB_FUNC( SVG_INIT )
    }
 }
 
-/* svg_set_background( <pHandle>, <nColor> ) --> NIL */
+/* svg_set_background( <pHandle>, <nHexColor> ) --> NIL */
 HB_FUNC( SVG_SET_BACKGROUND )
 {
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
    {
-      unsigned int color = hb_parni( 2 );
+      unsigned long hexColor = hb_parnl( 2 );
 
-      fprintf( svg->file, "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"#%06x\"/>\n", 0, 0, svg->width, svg->height, color );
+      if( hexColor <= 0xFFFFFF )
+      {
+         // No alpha channel, use full opacity
+         fprintf( svg->file, "<rect x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" fill=\"#%06lX\" fill-opacity=\"1\"/>\n", svg->width, svg->height, hexColor );
+      }
+      else if( hexColor <= 0xFFFFFFFF )
+      {
+         // Alpha channel is available
+         double a = ( hexColor & 0xFF ) / 255.0;
+         unsigned int color = ( hexColor >> 8 ) & 0xFFFFFF;
+         fprintf( svg->file, "<rect x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" fill=\"#%06X\" fill-opacity=\"%f\"/>\n", svg->width, svg->height, color, a );
+      }
+      else
+      {
+         fprintf( stderr, "Invalid hex value passed\n" );
+      }
    }
    else
    {
@@ -120,7 +174,7 @@ HB_FUNC( SVG_CLOSE )
       free( svg );
       hb_retl( HB_TRUE );
    }
-   else 
+   else
    {
       fprintf( stderr, "Error: svg_close called with NULL SVG pointer.\n" );
       HB_ERR_ARGS();
@@ -150,7 +204,7 @@ HB_FUNC( SVG_RECT )
 }
 
 /* svg_filled_rect( <pHandle>, <nX>, <nY>, <nWidth>, <nHeight>, <nColor> ) --> NIL */
-HB_FUNC( SVG_FILLED_RECT ) 
+HB_FUNC( SVG_FILLED_RECT )
 {
    SVG *svg = hb_svgParam( 1 );
 
@@ -271,7 +325,7 @@ HB_FUNC( SVG_LINE )
       int stroke_width = hb_parni( 6 );
       unsigned int color = hb_parni( 7 );
 
-      fprintf( svg->file, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%d; stroke:#%06x\" />\n", x1, y1, x2, y2, stroke_width, color );
+      svg_line( svg, x1, y1, x2, y2, stroke_width, color );
    }
    else
    {
@@ -324,6 +378,69 @@ HB_FUNC( SVG_POLYLINE )
       HB_ERR_ARGS();
    }
 }
+/* svg_arrow( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nStroke_width>, <nColor> ) --> NIL */
+HB_FUNC( SVG_ARROW )
+{
+   SVG *svg = hb_svgParam( 1 );
+   int x1 = hb_parni( 2 );
+   int y1 = hb_parni( 3 );
+   int x2 = hb_parni( 4 );
+   int y2 = hb_parni( 5 );
+   int stroke_width = hb_parni( 6 );
+   unsigned int color = hb_parni( 7 );
+
+   if( svg )
+   {
+      svg_arrow( svg, x1, y1, x2, y2, stroke_width, color );
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }
+}
+
+/* svg_numbered_arrow( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nStroke_width>, <nStart_num>, <nEnd_num>, <nStep>, <nColor> ) --> NIL */
+HB_FUNC( SVG_NUMBERED_ARROW )
+{
+   SVG *svg = hb_svgParam( 1 );
+   int x1 = hb_parni( 2 );
+   int y1 = hb_parni( 3 );
+   int x2 = hb_parni( 4 );
+   int y2 = hb_parni( 5 );
+   int stroke_width = hb_parni( 6 );
+   int start_num = hb_parni( 7 );
+   int end_num = hb_parni( 8 );
+   int step = hb_parni( 9 );
+   unsigned int color = hb_parni( 10 );
+
+   if( svg )
+   {
+      // Drawing an arrow
+      svg_arrow( svg, x1, y1, x2, y2, stroke_width, color );
+
+      // Determining the number of labels on the arrow
+      int num_labels = ( end_num - start_num ) / step + 1;
+
+      // Determining the spacing between labels on the arrow
+      float dx = ( x2 - x1 ) / ( float ) ( num_labels - 1 );
+      float dy = ( y2 - y1 ) / ( float ) ( num_labels - 1 );
+
+      // Adding labels
+      for( int i = 0; i < num_labels; ++i )
+      {
+         int x = x1 + dx * i;
+         int y = y1 + dy * i;
+         int num = start_num + step * i;
+         char label[ 10 ];
+         sprintf( label, "%d", num );
+         svg_text( svg, x, y, label, "Arial", 12, color );
+      }
+   }
+   else
+   {
+      HB_ERR_ARGS();
+   }
+}
 
 /* svg_hexagon( <pHandle>, <nHx>, <nHy>, <nR>, <nStroke_width>, <lType>, <nColor> ) --> NIL */
 HB_FUNC( SVG_HEXAGON )
@@ -343,9 +460,9 @@ HB_FUNC( SVG_HEXAGON )
       double angle_offset = ( type == 0 ? M_PI_2 : M_PI / 3 ); // Decides the orientation
       double x1 = hx + r * cos( a * 5 + angle_offset );
       double y1 = hy + r * sin( a * 5 + angle_offset );
-  
+
       fprintf( svg->file, "<polygon points=\"%.2lf,%.2lf ", x1, y1 );
-  
+
       for( int i = 0; i < 6; ++i )
       {
          double x = hx + r * cos( a * i + angle_offset );
@@ -379,9 +496,9 @@ HB_FUNC( SVG_FILLED_HEXAGON )
       double angle_offset = ( type == 0 ? M_PI_2 : M_PI / 3 ); // Decides the orientation
       double x1 = hx + r * cos( a * 5 + angle_offset );
       double y1 = hy + r * sin( a * 5 + angle_offset );
-  
+
       fprintf( svg->file, "<polygon points=\"%.2lf,%.2lf ", x1, y1 );
-  
+
       for( int i = 0; i < 6; ++i )
       {
          double x = hx + r * cos( a * i + angle_offset );
@@ -417,7 +534,7 @@ HB_FUNC( SVG_ELLIPSE )
    else
    {
       HB_ERR_ARGS();
-   }   
+   }
 }
 
 /* svg_filled_ellipse( <pHandle>, <nCx>, <nCy>, <nRx>, <nRy>, <nColor> ) --> NIL */
@@ -438,7 +555,7 @@ HB_FUNC( SVG_FILLED_ELLIPSE )
    else
    {
       HB_ERR_ARGS();
-   }   
+   }
 }
 /* svg_bezier_curve( <pHandle>, <aPoints>, <nPoint_count>, <nStroke_width>, <nColor> ) --> NIL */
 HB_FUNC( SVG_BEZIER_CURVE )
@@ -474,7 +591,7 @@ HB_FUNC( SVG_BEZIER_CURVE )
       }
 
       fprintf( svg->file, "\" stroke=\"#%06x\" stroke-width=\"%d\" fill=\"none\"/>\n", color, stroke_width );
-    
+
       if( points )
       {
          hb_xfree( points );
@@ -483,7 +600,7 @@ HB_FUNC( SVG_BEZIER_CURVE )
    else
    {
       HB_ERR_ARGS();
-   }      
+   }
 }
 
 /* svg_text( <pHandle>, <nX>, <nY>, <cText>, <cFont>, <nSize>, <nColor> ) --> NIL */
@@ -500,12 +617,12 @@ HB_FUNC( SVG_TEXT )
       int size = hb_parni( 6 );
       unsigned int color = hb_parni( 7 );
 
-      fprintf( svg->file, "<text x=\"%d\" y=\"%d\" font-family=\"%s\" font-size=\"%d\" fill=\"#%06x\">%s</text>\n", x, y, font, size, color, text );
+      svg_text( svg, x, y, text, font, size, color );
    }
    else
    {
       HB_ERR_ARGS();
-   }   
+   }
 }
 
 /* Linear gradient */
@@ -534,7 +651,7 @@ HB_FUNC( SVG_LINEAR_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }   
+   }
 }
 
 /* svg_triangle_linear_gradient( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nX3>, <nY3>, <nStartColor>, <nEndColor> ) --> NIL */ // to be fixed
@@ -543,7 +660,7 @@ HB_FUNC( SVG_TRIANGLE_LINEAR_GRADIENT )
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
-   {   
+   {
       int x1 = hb_parni( 2 );
       int y1 = hb_parni( 3 );
       int x2 = hb_parni( 4 );
@@ -570,7 +687,7 @@ HB_FUNC( SVG_TRIANGLE_LINEAR_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }        
+   }
 }
 
 /* Radial gradient */
@@ -580,7 +697,7 @@ HB_FUNC( SVG_RADIAL_GRADIENT )
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
-   {   
+   {
       const char *id = hb_parc( 2 );
       unsigned int innerColor = hb_parni( 3 );
       unsigned int outerColor = hb_parni( 4 );
@@ -598,7 +715,7 @@ HB_FUNC( SVG_RADIAL_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }        
+   }
 }
 
 /* svg_triangle_radial_gradient( <pHandle>, <nX1>, <nY1>, <nX2>, <nY2>, <nX3>, <nY3>, <nStartColor>, <nEndColor> ) --> NIL */ // to be fixed
@@ -607,7 +724,7 @@ HB_FUNC( SVG_TRIANGLE_RADIAL_GRADIENT )
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
-   {   
+   {
       int x1 = hb_parni( 2 );
       int y1 = hb_parni( 3 );
       int x2 = hb_parni( 4 );
@@ -626,7 +743,7 @@ HB_FUNC( SVG_TRIANGLE_RADIAL_GRADIENT )
       fprintf( svg->file, "  </radialGradient>\n" );
       fprintf( svg->file, "</defs>\n" );
 
-      // Drawing a triangle with a gradient 
+      // Drawing a triangle with a gradient
       fprintf( svg->file, "<polygon points=\"%d,%d %d,%d %d,%d\" fill=\"url(#triangleRadialGradient%d)\"/>\n", x1, y1, x2, y2, x3, y3, gradient_id );
 
       gradient_id++; // Increment the gradient ID
@@ -634,7 +751,7 @@ HB_FUNC( SVG_TRIANGLE_RADIAL_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }        
+   }
 }
 
 /* svg_rect_gradient( <pHandle>, nX, nY, nWidth, nHeight, cGradient_id ) */
@@ -643,7 +760,7 @@ HB_FUNC( SVG_RECT_GRADIENT )
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
-   {    
+   {
       int x = hb_parni( 2 );
       int y = hb_parni( 3 );
       int width = hb_parni( 4 );
@@ -655,7 +772,7 @@ HB_FUNC( SVG_RECT_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }       
+   }
 }
 
 /* svg_circle_gradient( <pHandle>, nCx, nCy, nR, cGradient_id ) --> NIL */
@@ -664,7 +781,7 @@ HB_FUNC( SVG_CIRCLE_GRADIENT )
    SVG *svg = hb_svgParam( 1 );
 
    if( svg )
-   {    
+   {
       int cx = hb_parni( 2 );
       int cy = hb_parni( 3 );
       int r = hb_parni( 4 );
@@ -675,5 +792,5 @@ HB_FUNC( SVG_CIRCLE_GRADIENT )
    else
    {
       HB_ERR_ARGS();
-   }       
+   }
 }
