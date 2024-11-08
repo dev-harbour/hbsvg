@@ -1,0 +1,15 @@
+-hblib
+-inc
+
+-olib/${hb_plat}/${hb_comp}/${hb_name}
+
+-w3 -es2 -gc3
+
+-iinclude
+
+-hbx=include/${hb_name}.hbx
+
+src/*.c
+
+$hb_pkg_dynlib.hbm
+$hb_pkg_install.hbm

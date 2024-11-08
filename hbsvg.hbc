@@ -1,0 +1,7 @@
+description=hbsvg
+
+incpaths=.
+incpaths=include
+libpaths=lib/${hb_plat}/${hb_comp}
+
+libs=${_HB_DYNPREF}${hb_name}${_HB_DYNSUFF}
