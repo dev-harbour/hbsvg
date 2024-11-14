@@ -7,13 +7,15 @@
 #include <time.h>
 
 #include "hbapi.h"
-#include "hbapifs.h"
+//#include "hbapifs.h"
 #include "hbapierr.h"
 #include "hbapiitm.h"
-#include "hbapistr.h"
-#include "hbstack.h"
+//#include "hbapistr.h"
+//#include "hbstack.h"
 
-typedef enum bool
+typedef enum   _bool bool;
+
+enum _bool
 {
    F = 0,
    T = ( ! 0 )
