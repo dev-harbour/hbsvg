@@ -7,11 +7,8 @@
 #include <time.h>
 
 #include "hbapi.h"
-//#include "hbapifs.h"
 #include "hbapierr.h"
 #include "hbapiitm.h"
-//#include "hbapistr.h"
-//#include "hbstack.h"
 
 typedef enum   _bool bool;
 
