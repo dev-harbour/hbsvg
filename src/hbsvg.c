@@ -1,5 +1,5 @@
 /*
- * Harbour SVG (HBSVG) Project
+ * Harbour Scalable Vector Graphics (HBSVG) Project
  * Copyright 2014 - 2024 Rafał Jopek
  * Website: https://harbour.pl
  *
@@ -63,9 +63,9 @@ static void svg_line( SVG *svg, int x1, int y1, int x2, int y2, int stroke_width
    fprintf( svg->file, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%d; stroke:#%06x\" />\n", x1, y1, x2, y2, stroke_width, color );
 }
 
-static void svg_text( SVG *svg, int x, int y, const char *text, const char *font, int size, unsigned int color )
+static void svg_text( SVG *svg, int x, int y, const char *text, const char *font, int size, int font_weight, unsigned int color )
 {
-   fprintf( svg->file, "<text x=\"%d\" y=\"%d\" font-family=\"%s\" font-size=\"%d\" fill=\"#%06x\">%s</text>\n", x, y, font, size, color, text );
+   fprintf( svg->file, "<text x=\"%d\" y=\"%d\" font-family=\"%s\" font-size=\"%d\" font-weight=\"%d\" fill=\"#%06x\">%s</text>\n", x, y, font, size, font_weight, color & 0xFFFFFF, text );
 }
 
 static void svg_arrow( SVG *svg, int x1, int y1, int x2, int y2, int stroke_width, unsigned int color )
@@ -472,7 +472,7 @@ HB_FUNC( SVG_NUMBERED_ARROW )
             label_offset_x += 3;
          }
 
-         svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, color );
+         svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, 400, color );
       }
    }
    else
@@ -523,7 +523,7 @@ HB_FUNC( SVG_NUMBERED_ARROW_XY )
          int tick_length = (i % 5 == 0) ? 10 : 5; // Every fifth tick mark is longer
          svg_line(svg, x, y + tick_length, x, y, 1, color);
 
-         svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, color );
+         svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, 400, color );
       }
 
       // Adding labels and tick marks for the vertical arrow
@@ -554,7 +554,7 @@ HB_FUNC( SVG_NUMBERED_ARROW_XY )
 
          if( num != 0 )  // Skip zero for the vertical arrow
          {
-            svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, color );
+            svg_text( svg, x + label_offset_x, y + label_offset_y, label, "Arial", 12, 400, color );
          }
       }
    }
@@ -725,7 +725,7 @@ HB_FUNC( SVG_BEZIER_CURVE )
    }
 }
 
-/* svg_text( <pHandle>, <nX>, <nY>, <cText>, <cFont>, <nSize>, <nColor> ) --> NIL */
+// void svg_text( SVG *svg, int x, int y, const char *text, const char *font, int size, int font_weight, unsigned int color );
 HB_FUNC( SVG_TEXT )
 {
    SVG *svg = hb_svg_Param( 1 );
@@ -737,9 +737,10 @@ HB_FUNC( SVG_TEXT )
       const char *text = hb_parc( 4 );
       const char *font = hb_parc( 5 );
       int size = hb_parni( 6 );
-      unsigned int color = hb_parni( 7 );
+      int font_weight = hb_parni( 7 );
+      unsigned int color = hb_parni( 8 );
 
-      svg_text( svg, x, y, text, font, size, color );
+      svg_text( svg, x, y, text, font, size, font_weight, color );
    }
    else
    {
