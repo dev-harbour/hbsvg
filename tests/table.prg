@@ -1,3 +1,8 @@
+/*
+ *
+ */
+
+#include "hbsvg.ch"
 
 PROCEDURE Main()
 
@@ -15,7 +20,7 @@ PROCEDURE Main()
 
    hSvg := svg_init( "table.svg", 566, 793 )
 
-   svg_text( hSvg, 50, 50, "Table of countries", "Arial", 16, 0xFF0000 )
+   svg_text( hSvg, 50, 50, "Table of countries", "Arial", 16, FONT_WEIGHT_NORMAL, 0xFF0000 )
 
    aCol := { { "Code", "CODE", 60 }, { "Country", "NAME", 200 }, { "Residents", "RESIDENTS", 90 } }
    draw_table( hSvg, 50, 75, aCol )
@@ -39,7 +44,7 @@ STATIC PROCEDURE draw_table( hSvg, nX, nY, aCol )
 
       nTextWidth := Len( xValue ) * 6
 
-      svg_text( hSvg, nDX + ( aCol[ nI, 3 ] - nTextWidth ) / 2, nY, xValue, "Arial", 10, 0x000000 )
+      svg_text( hSvg, nDX + ( aCol[ nI, 3 ] - nTextWidth ) / 2, nY, xValue, "Arial", 10, FONT_WEIGHT_NORMAL, 0x000000 )
 
       nDX += aCol[ nI, 3 ]
 
@@ -66,7 +71,7 @@ STATIC PROCEDURE draw_table( hSvg, nX, nY, aCol )
             cValue := xValue
          ENDIF
 
-         svg_text( hSvg, nDX + 10, nY + 10, cValue, "Arial", 10, 0x000000 )
+         svg_text( hSvg, nDX + 10, nY + 10, cValue, "Arial", 10, FONT_WEIGHT_NORMAL, 0x000000 )
 
          nDX += aCol[ nI, 3 ]
 
