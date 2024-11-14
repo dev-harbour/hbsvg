@@ -19,7 +19,7 @@ enum _bool
 {
    F = 0,
    T = ( ! 0 )
-} bool;
+};
 
 typedef struct
 {
